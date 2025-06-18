@@ -380,37 +380,72 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
 -- 🔄 Variabel mode teleportasi
-local teleportMode = "Instant" -- default: Instant
+local teleportMode = "Instant"
 local isTeleporting = false
+local currentTween = nil
+local cancelTeleport = false
+
+local player = Players.LocalPlayer
 
 -- ✅ Fungsi Teleport
 local function GroundFlyTo(position)
-    if isTeleporting then return end
+    -- Batalkan teleportasi sebelumnya jika masih berjalan
+    cancelTeleport = true
+    if currentTween then
+        currentTween:Cancel()
+        currentTween = nil
+    end
+
+    task.wait(0.1) -- delay untuk memastikan cancel berjalan
+    cancelTeleport = false
     isTeleporting = true
 
-    local success, err = pcall(function()
-        local player = Players.LocalPlayer
-        local char = player.Character or player.CharacterAdded:Wait()
-        local root = char:WaitForChild("HumanoidRootPart")
+    local char = player.Character or player.CharacterAdded:Wait()
+    local root = char:WaitForChild("HumanoidRootPart")
 
-        if teleportMode == "Tween" then
-            local goal = { CFrame = CFrame.new(position) }
-            local distance = (root.Position - position).Magnitude
-            local tweenInfo = TweenInfo.new(
-                distance / 100,
-                Enum.EasingStyle.Linear,
-                Enum.EasingDirection.Out
-            )
-            local tween = TweenService:Create(root, tweenInfo, goal)
-            tween:Play()
-            tween.Completed:Wait()
-        else
-            root.CFrame = CFrame.new(position)
-        end
+    -- Jika character mati
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.Died:Connect(function()
+            if currentTween then currentTween:Cancel() end
+            cancelTeleport = true
+        end)
+    end
+
+    -- Jika character respawn (CharacterAdded)
+    local respawnConn
+    respawnConn = player.CharacterAdded:Connect(function()
+        if currentTween then currentTween:Cancel() end
+        cancelTeleport = true
+        respawnConn:Disconnect()
     end)
 
-    if not success then
-        warn("GroundFlyTo failed:", err)
+    if teleportMode == "Tween" then
+        local goal = { CFrame = CFrame.new(position) }
+        local distance = (root.Position - position).Magnitude
+        local tweenInfo = TweenInfo.new(
+            distance / 100,
+            Enum.EasingStyle.Linear,
+            Enum.EasingDirection.Out
+        )
+        currentTween = TweenService:Create(root, tweenInfo, goal)
+        currentTween:Play()
+
+        local completed = false
+        currentTween.Completed:Connect(function()
+            completed = true
+        end)
+
+        while not completed and not cancelTeleport do
+            task.wait()
+        end
+
+        if cancelTeleport and currentTween then
+            currentTween:Cancel()
+            currentTween = nil
+        end
+    else
+        root.CFrame = CFrame.new(position)
     end
 
     isTeleporting = false
@@ -438,9 +473,20 @@ TeleportTab:CreateDropdown({
 
 TeleportTab:CreateSection("Destinations")
 
-TeleportTab:CreateButton({ Name = "Base Camp", Callback = function() GroundFlyTo(Vector3.new(-6013.996094, -159.001984, -49.564968)) end })
-TeleportTab:CreateButton({ Name = "Camp 1", Callback = function() GroundFlyTo(Vector3.new(-3721.721680, 225.043533, 234.952774)) end })
-TeleportTab:CreateButton({ Name = "Camp 2", Callback = function() GroundFlyTo(Vector3.new(1792.230591, 105.453842, -137.904129)) end })
-TeleportTab:CreateButton({ Name = "Camp 3", Callback = function() GroundFlyTo(Vector3.new(5893.259766, 320.997986, -19.350546)) end })
-TeleportTab:CreateButton({ Name = "Camp 4", Callback = function() GroundFlyTo(Vector3.new(8989.759766, 595.731384, 101.092163)) end })
-TeleportTab:CreateButton({ Name = "South Pole", Callback = function() GroundFlyTo(Vector3.new(10986.909180, 549.117249, 116.376915)) end })
+local function CreateTeleportButton(name, position)
+    TeleportTab:CreateButton({
+        Name = name,
+        Callback = function()
+            GroundFlyTo(position)
+        end
+    })
+end
+
+-- 🗺️ Daftar Teleportasi
+CreateTeleportButton("Base Camp", Vector3.new(-6013.996094, -159.001984, -49.564968))
+CreateTeleportButton("Camp 1", Vector3.new(-3721.721680, 225.043533, 234.952774))
+CreateTeleportButton("Camp 2", Vector3.new(1792.230591, 105.453842, -137.904129))
+CreateTeleportButton("Camp 3", Vector3.new(5893.259766, 320.997986, -19.350546))
+CreateTeleportButton("Camp 4", Vector3.new(8989.759766, 595.731384, 101.092163))
+CreateTeleportButton("South Pole", Vector3.new(10986.909180, 549.117249, 116.376915))
+
