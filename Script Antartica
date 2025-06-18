@@ -1,0 +1,446 @@
+-- https://github.com/OopssSorry/LuaU-Free-Key-System-UI/
+
+local KeySystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/OopssSorry/LuaU-Free-Key-System-UI/main/source.lua"))()
+local KeyValid = false
+local response = KeySystem:Init({
+	Debug=false, -- <bool> Prints some output in console when true
+	Title="MarkHub | Key System", -- <string or nil> Title of key system
+	Description=nil, -- <string or nil> Description of key system
+	Link="https://link-target.net/1361254/xVV7023JICCI", -- <string> String to get key
+	Discord="", -- <string or nil> Button to join your discord server
+	SaveKey=false, -- <bool or nil> Just auto save key
+	Verify=function(key) -- <function> Verify is key valid
+		if key=="ZqpOr10jeRd" then
+      KeyValid=true
+			return true
+		else
+			return false
+		end
+	end,
+	GuiParent = game.CoreGui, -- <object or nil> :3
+})
+
+if not response or not KeyValid then return end
+-- HERE YOUR SCRIPT
+
+-- ⬇️ Load Rayfield
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- ⬇️ Buat Window
+local Window = Rayfield:CreateWindow({
+   Name = "Expedition Antarctica",
+   Icon = 0,
+   LoadingTitle = "MARKZUKERBERK HUB",
+   LoadingSubtitle = "by HGLCODER",
+   Theme = "Default",
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "ExpeditionAntarcticaConfig",
+      FileName = "Settings"
+   },
+   Discord = {
+      Enabled = false,
+      Invite = "noinvitelink",
+      RememberJoins = true
+   },
+   KeySystem = false
+})
+
+-- Player Tab
+local MainTab = Window:CreateTab("👤 Player", nil)
+local Section = MainTab:CreateSection("Movement")
+
+-- Speed Slider
+local CurrentSpeed = 16
+MainTab:CreateSlider({
+    Name = "🏃‍♂️ Walk Speed",
+    Range = {16, 200},
+    Increment = 1,
+    Suffix = " studs",
+    CurrentValue = 16,
+    Flag = "SpeedSlider",
+    Callback = function(Value)
+        CurrentSpeed = Value
+        local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = Value
+        end
+    end
+})
+
+-- Jump Power Slider
+local CurrentJump = 50
+MainTab:CreateSlider({
+    Name = "🦨 Jump Power",
+    Range = {50, 200},
+    Increment = 1,
+    Suffix = " studs",
+    CurrentValue = 50,
+    Flag = "JumpSlider",
+    Callback = function(Value)
+        CurrentJump = Value
+        local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.JumpPower = Value
+        end
+    end
+})
+
+-- Reapply values on respawn
+game.Players.LocalPlayer.CharacterAdded:Connect(function(character)
+    task.wait(0.5)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = CurrentSpeed
+        humanoid.JumpPower = CurrentJump
+    end
+end)
+
+-- Infinite Jump
+local jumpConnection
+MainTab:CreateToggle({
+   Name = "Infinite Jump (PC)",
+   CurrentValue = false,
+   Flag = "InfiniteJumpToggle",
+   Callback = function(Value)
+        _G.infinjump = Value
+        if Value and _G.infinJumpStarted == nil then
+            _G.infinJumpStarted = true
+            Rayfield:Notify({ Title = "Infinite Jump", Content = "Press space to infinite jump!", Duration = 5 })
+            local plr = game.Players.LocalPlayer
+            local m = plr:GetMouse()
+            jumpConnection = m.KeyDown:Connect(function(k)
+                if _G.infinjump and k:byte() == 32 then
+                    local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid:ChangeState("Jumping")
+                        task.wait()
+                        humanoid:ChangeState("Seated")
+                    end
+                end
+            end)
+        elseif not Value and jumpConnection then
+            jumpConnection:Disconnect()
+        end
+   end,
+})
+
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local infiniteJumpEnabled = false
+
+-- ⬇️ Infinite Jump (Hanya saat tekan tombol lompat)
+local infiniteJumpEnabled = false
+
+-- Tangkap input lompat
+UserInputService.JumpRequest:Connect(function()
+    if infiniteJumpEnabled then
+        local character = Players.LocalPlayer.Character
+        if character and character:FindFirstChildOfClass("Humanoid") then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- ⬇️ Tambahkan Toggle ke Rayfield
+MainTab:CreateToggle({
+    Name = "Infinite Jump (Mobile)",
+    CurrentValue = false,
+    Flag = "InfiniteJumpKeyOnly",
+    Callback = function(Value)
+        infiniteJumpEnabled = Value
+    end
+})
+
+-- No Fall Damage Integration
+local NoFallConnection
+local CharacterConnection
+local function DisableFallDamage()
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local fallScript = char:FindFirstChild("Client_Fall_Damage")
+    if fallScript and fallScript:IsA("Script") then
+        fallScript.Disabled = true
+    end
+end
+
+MainTab:CreateToggle({
+    Name = "🌪 No Fall Damage",
+    CurrentValue = false,
+    Flag = "NoFallDamage",
+    Callback = function(Value)
+        local player = game.Players.LocalPlayer
+        if Value then
+            DisableFallDamage()
+            CharacterConnection = player.CharacterAdded:Connect(function()
+                task.wait(0.5)
+                DisableFallDamage()
+            end)
+        else
+            if CharacterConnection then
+                CharacterConnection:Disconnect()
+                CharacterConnection = nil
+            end
+            local char = player.Character
+            if char then
+                local fallScript = char:FindFirstChild("Client_Fall_Damage")
+                if fallScript and fallScript:IsA("Script") then
+                    fallScript.Disabled = false
+                end
+            end
+        end
+    end
+})
+
+-- NoClip
+local NoclipActive = false
+local NoclipConnection
+local function UpdateNoclip()
+    if NoclipActive and game.Players.LocalPlayer.Character then
+        for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end
+
+-- Auto Farm System
+local AutoFarmActive = false
+local AutoFarmConnection = nil
+local FarmPosition = CFrame.new(3733.94189, 1508.68774, -184.84581, 0.814204156, 5.19907921e-08, 0.580578625, -6.29331876e-09, 1, -8.07241989e-08, -0.580578625, 6.20722105e-08, 0.814204156)
+
+local function AutoFarmLoop()
+    while AutoFarmActive do
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+
+        -- Wait for the character and HumanoidRootPart to load
+        repeat task.wait() until character:FindFirstChild("HumanoidRootPart") and character:FindFirstChildOfClass("Humanoid")
+
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+        -- Check if humanoid is alive
+        if humanoid and humanoid.Health > 0 then
+            -- Teleport to farm location
+            character.HumanoidRootPart.CFrame = FarmPosition
+            task.wait(0.5)
+
+            -- Move left
+            character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(-7, 0, 0)
+            task.wait(1)
+
+            -- Move right
+            character.HumanoidRootPart.CFrame = FarmPosition * CFrame.new(7, 0, 0)
+            task.wait(1)
+
+            -- Return to center
+            character.HumanoidRootPart.CFrame = FarmPosition
+            task.wait(1)
+
+            -- Reset character
+            humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+        end
+
+        -- Wait until the character respawns and is alive
+        repeat task.wait() until player.Character and player.Character:FindFirstChildOfClass("Humanoid") and player.Character:FindFirstChildOfClass("Humanoid").Health > 0
+    end
+end
+
+MainTab:CreateToggle({
+    Name = "⚡ Auto Farm (Continuous)",
+    CurrentValue = false,
+    Flag = "AutoFarmToggle",
+    Callback = function(Value)
+        AutoFarmActive = Value
+        if Value then
+            Rayfield:Notify({
+                Title = "Auto Farm Started",
+                Content = "Running continuous farming loop...",
+                Duration = 3,
+                Image = nil
+            })
+            AutoFarmConnection = task.spawn(AutoFarmLoop)
+        else
+            if AutoFarmConnection then
+                task.cancel(AutoFarmConnection)
+            end
+            Rayfield:Notify({
+                Title = "Auto Farm Stopped",
+                Content = "Farming has been disabled",
+                Duration = 3,
+                Image = nil
+            })
+        end
+    end
+})
+
+-- Misc Tab
+local MiscTab = Window:CreateTab("🔧 Misc", nil)
+MiscTab:CreateSection("Utilities")
+
+-- FPS Booster
+MiscTab:CreateButton({
+    Name = "🚀 FPS Booster",
+    Callback = function()
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("ParticleEmitter") or v:IsA("Decal") or v:IsA("Smoke") or v:IsA("Fire") then
+                v:Destroy()
+            end
+        end
+        settings().Rendering.QualityLevel = 1
+        game.Lighting.GlobalShadows = false
+        Rayfield:Notify({ Title = "FPS Boost Applied", Content = "Graphics optimized for performance", Duration = 3 })
+    end
+})
+
+-- FOV Slider
+MiscTab:CreateSlider({
+    Name = "👁️ Field of View",
+    Range = {70, 120},
+    Increment = 1,
+    Suffix = "°",
+    CurrentValue = 70,
+    Flag = "FOVSlider",
+    Callback = function(Value)
+        workspace.CurrentCamera.FieldOfView = Value
+    end
+})
+
+
+MiscTab:CreateToggle({
+    Name = "🚀 NoClip (Walk Through Walls)",
+    CurrentValue = false,
+    Flag = "NoClipToggle",
+    Callback = function(Value)
+        NoclipActive = Value
+        if NoclipConnection then NoclipConnection:Disconnect() end
+        if Value then
+            NoclipConnection = game:GetService("RunService").Stepped:Connect(UpdateNoclip)
+            Rayfield:Notify({ Title = "NoClip Enabled", Content = "You can now walk through walls", Duration = 3 })
+        else
+            Rayfield:Notify({ Title = "NoClip Disabled", Content = "Collisions restored", Duration = 3 })
+        end
+    end
+})
+
+-- Fullbright
+MiscTab:CreateToggle({
+    Name = "💡 Fullbright (Remove Darkness)",
+    CurrentValue = false,
+    Flag = "FullbrightToggle",
+    Callback = function(Value)
+        game.Lighting.Ambient = Value and Color3.new(1, 1, 1) or Color3.new(0.5, 0.5, 0.5)
+        game.Lighting.FogEnd = Value and 100000 or 10000
+        Rayfield:Notify({
+            Title = Value and "Fullbright Enabled" or "Fullbright Disabled",
+            Content = Value and "Darkness removed from the game" or "Default lighting restored",
+            Duration = 3
+        })
+    end
+})
+
+-- Fog Toggle
+local FogRemoved = false
+local OriginalFogStart = game.Lighting.FogStart
+local OriginalFogEnd = game.Lighting.FogEnd
+MiscTab:CreateToggle({
+    Name = "🌫️ Remove Fog",
+    CurrentValue = false,
+    Flag = "RemoveFogToggle",
+    Callback = function(Value)
+        FogRemoved = Value
+        if Value then
+            OriginalFogStart = game.Lighting.FogStart
+            OriginalFogEnd = game.Lighting.FogEnd
+            game.Lighting.FogStart = 0
+            game.Lighting.FogEnd = 100000
+            Rayfield:Notify({ Title = "Fog Removed", Content = "All fog has been cleared", Duration = 3 })
+        else
+            game.Lighting.FogStart = OriginalFogStart
+            game.Lighting.FogEnd = OriginalFogEnd
+            Rayfield:Notify({ Title = "Fog Restored", Content = "Default fog settings applied", Duration = 3 })
+        end
+    end
+})
+
+-- Initial Notification
+Rayfield:Notify({
+   Title = "Script Loaded!",
+   Content = "Expedition Antarctica Script by MARKZUKERBERK",
+   Duration = 6.5
+})
+
+-- ⬇️ Services
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+-- 🔄 Variabel mode teleportasi
+local teleportMode = "Instant" -- default: Instant
+local isTeleporting = false
+
+-- ✅ Fungsi Teleport
+local function GroundFlyTo(position)
+    if isTeleporting then return end
+    isTeleporting = true
+
+    local success, err = pcall(function()
+        local player = Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local root = char:WaitForChild("HumanoidRootPart")
+
+        if teleportMode == "Tween" then
+            local goal = { CFrame = CFrame.new(position) }
+            local distance = (root.Position - position).Magnitude
+            local tweenInfo = TweenInfo.new(
+                distance / 100,
+                Enum.EasingStyle.Linear,
+                Enum.EasingDirection.Out
+            )
+            local tween = TweenService:Create(root, tweenInfo, goal)
+            tween:Play()
+            tween.Completed:Wait()
+        else
+            root.CFrame = CFrame.new(position)
+        end
+    end)
+
+    if not success then
+        warn("GroundFlyTo failed:", err)
+    end
+
+    isTeleporting = false
+end
+
+-- ✅ Tab Teleport
+local TeleportTab = Window:CreateTab("📍 Teleport", nil)
+
+TeleportTab:CreateSection("Teleport Mode")
+TeleportTab:CreateDropdown({
+    Name = "Select Teleport Mode",
+    Options = {"Instant", "Tween"},
+    CurrentOption = {"Instant"},
+    MultipleOptions = false,
+    Flag = "TeleportMode",
+    Callback = function(option)
+        teleportMode = option[1]
+        Rayfield:Notify({
+            Title = "Teleport Mode Updated",
+            Content = "Now using " .. teleportMode .. " mode.",
+            Duration = 4
+        })
+    end
+})
+
+TeleportTab:CreateSection("Destinations")
+
+TeleportTab:CreateButton({ Name = "Base Camp", Callback = function() GroundFlyTo(Vector3.new(-6013.996094, -159.001984, -49.564968)) end })
+TeleportTab:CreateButton({ Name = "Camp 1", Callback = function() GroundFlyTo(Vector3.new(-3721.721680, 225.043533, 234.952774)) end })
+TeleportTab:CreateButton({ Name = "Camp 2", Callback = function() GroundFlyTo(Vector3.new(1792.230591, 105.453842, -137.904129)) end })
+TeleportTab:CreateButton({ Name = "Camp 3", Callback = function() GroundFlyTo(Vector3.new(5893.259766, 320.997986, -19.350546)) end })
+TeleportTab:CreateButton({ Name = "Camp 4", Callback = function() GroundFlyTo(Vector3.new(8989.759766, 595.731384, 101.092163)) end })
+TeleportTab:CreateButton({ Name = "South Pole", Callback = function() GroundFlyTo(Vector3.new(10986.909180, 549.117249, 116.376915)) end })
