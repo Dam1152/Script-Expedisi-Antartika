@@ -10,7 +10,7 @@ local response = KeySystem:Init({
 	Discord="", -- <string or nil> Button to join your discord server
 	SaveKey=false, -- <bool or nil> Just auto save key
 	Verify=function(key) -- <function> Verify is key valid
-		if key=="ZbvEr76po" then
+		if key=="ZireAd1K94" then
       KeyValid=true
 			return true
 		else
@@ -209,6 +209,67 @@ local function UpdateNoclip()
     end
 end
 
+-- ✅ Auto Win Looping Tween
+local FarmTab = Window:CreateTab("Farm", nil)
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local AutoWinActive = false
+local AutoWinRunning = false
+local StopTween = false
+local CurrentTween = nil
+
+local checkpoints = {
+    {pos = Vector3.new(-6013.996094, -159.001984, -49.564968), time = 0},
+    {pos = Vector3.new(-3721.721680, 225.043533, 234.952774), time = 90},
+    {pos = Vector3.new(1792.230591, 105.453842, -137.904129), time = 285},
+    {pos = Vector3.new(5893.259766, 320.997986, -19.350546), time = 330},
+    {pos = Vector3.new(8989.759766, 595.731384, 101.092163), time = 244},
+    {pos = Vector3.new(10986.909180, 549.117249, 116.376915), time = 200},
+}
+
+local function AutoWinLoop()
+    if AutoWinRunning then return end
+    AutoWinRunning = true
+
+    while AutoWinActive do
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local root = char:WaitForChild("HumanoidRootPart")
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+        StopTween = false
+
+        if humanoid then
+            humanoid.Died:Connect(function()
+                StopTween = true
+                if CurrentTween then CurrentTween:Cancel() end
+            end)
+        end
+
+        for i = 1, #checkpoints - 1 do
+            if not AutoWinActive or StopTween then break end
+
+            local target = checkpoints[i+1]
+            local tweenInfo = TweenInfo.new(target.time, Enum.EasingStyle.Linear)
+            CurrentTween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(target.pos)})
+            CurrentTween:Play()
+            CurrentTween.Completed:Wait()
+            task.wait(3)
+        end
+
+        if not AutoWinActive then break end
+
+        if StopTween then
+            repeat task.wait() until LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        else
+            LocalPlayer:LoadCharacter()
+            task.wait(5)
+        end
+    end
+
+    AutoWinRunning = false
+end
+
 -- Auto Farm System
 local AutoFarmActive = false
 local AutoFarmConnection = nil
@@ -251,8 +312,8 @@ local function AutoFarmLoop()
     end
 end
 
-MainTab:CreateToggle({
-    Name = "⚡ Auto Farm (Continuous)",
+FarmTab:CreateToggle({
+    Name = "⚡ Auto Farm (Old)",
     CurrentValue = false,
     Flag = "AutoFarmToggle",
     Callback = function(Value)
@@ -278,6 +339,90 @@ MainTab:CreateToggle({
         end
     end
 })
+
+-- Auto Farm System (Instan ke 1, Tween ke 2 & 3)
+local TweenService = game:GetService("TweenService")
+
+local AutoFarmActive = false
+local AutoFarmConnection = nil
+
+local Waypoints = {
+    Vector3.new(4727.90, 904.38, 516.03), -- Instan
+    Vector3.new(4675.21, 922.13, 554.72), -- Tween
+    Vector3.new(4736.85, 902.26, 514.43), -- Tween & Reset
+}
+
+local function TweenToPosition(part, targetPos, duration)
+    local tween = TweenService:Create(part, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+        CFrame = CFrame.new(targetPos)
+    })
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+local function AutoFarmLoop()
+    while AutoFarmActive do
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        repeat task.wait() until character:FindFirstChild("HumanoidRootPart") and character:FindFirstChildOfClass("Humanoid")
+
+        local root = character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+        if humanoid and humanoid.Health > 0 then
+            for index, pos in ipairs(Waypoints) do
+                if index == 1 then
+                    -- Instan teleport ke titik pertama
+                    root.CFrame = CFrame.new(pos)
+                else
+                    -- Tween ke titik berikutnya
+                    TweenToPosition(root, pos, 2) -- 2 detik tween
+                end
+
+                task.wait(1)
+
+                -- Reset karakter jika titik terakhir
+                if index == #Waypoints then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+                    break
+                end
+            end
+        end
+
+        -- Tunggu sampai respawn
+        repeat task.wait()
+        until player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            and player.Character:FindFirstChildOfClass("Humanoid").Health > 0
+    end
+end
+
+FarmTab:CreateToggle({
+    Name = "🚀 Auto Farm Coin (Better)",
+    CurrentValue = false,
+    Flag = "AutoFarmTween",
+    Callback = function(Value)
+        AutoFarmActive = Value
+        if Value then
+            Rayfield:Notify({
+                Title = "Auto Farm Activated",
+                Content = "1st Point = Teleport | 2nd & 3rd = Tween",
+                Duration = 3
+            })
+            AutoFarmConnection = task.spawn(AutoFarmLoop)
+        else
+            if AutoFarmConnection then
+                task.cancel(AutoFarmConnection)
+                AutoFarmConnection = nil
+            end
+            Rayfield:Notify({
+                Title = "Auto Farm Stopped",
+                Content = "Disabled successfully",
+                Duration = 3
+            })
+        end
+    end
+})
+
 
 -- Misc Tab
 local MiscTab = Window:CreateTab("🔧 Misc", nil)
@@ -489,4 +634,3 @@ CreateTeleportButton("Camp 2", Vector3.new(1792.230591, 105.453842, -137.904129)
 CreateTeleportButton("Camp 3", Vector3.new(5893.259766, 320.997986, -19.350546))
 CreateTeleportButton("Camp 4", Vector3.new(8989.759766, 595.731384, 101.092163))
 CreateTeleportButton("South Pole", Vector3.new(10986.909180, 549.117249, 116.376915))
-
